@@ -1,5 +1,5 @@
 ****************************
-Mopidy-Party
+Mopidy-Zestbox
 ****************************
 
 TODO: CHANGE THIS.
