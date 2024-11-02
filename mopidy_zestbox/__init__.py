@@ -151,7 +151,8 @@ def lemon_factory(config, core):
     ('/vote', VoteRequestHandler, {'core': core, 'data':data, 'config':config}),
     ('/add', AddRequestHandler, {'core': core, 'data':data, 'config':config}),
     ('/config', ConfigHandler, {'config':config}),
-    ('/visualizer', VisualizerHandler, {'core': core, 'data':data, 'config':config})
+    ('/visualizer', RedirectHandler, {'url': 'visualizer.html'}),
+    ('/visualizer.html', VisualizerHandler, {'core': core, 'data':data, 'config':config})
     ]
 
 

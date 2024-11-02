@@ -1,5 +1,5 @@
-'use strict';
 import AudioMotionAnalyzer from 'https://cdn.skypack.dev/audiomotion-analyzer?min';
+'use strict';
 
 angular.module('visualizerApp', [])
   .controller('MainController', function ($scope, $http) {
