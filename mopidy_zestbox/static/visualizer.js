@@ -87,6 +87,14 @@ angular.module('visualizerApp', [])
       return sourceAsText;
     };
 
+    $scope.getTrackCoverImage = function (track) {
+      var imageUri = "No image found.";
+      if (track.uri) {
+        imageUri = mopidy.library.get_images(track.uri)[0];
+      }
+      return imageUri;
+    }
+
     $scope.getFontAwesomeIcon = function (source) {
       var sources_with_fa_icon = ['bandcamp', 'mixcloud', 'soundcloud', 'spotify', 'youtube'];
       var css_class = 'fa fa-music';
