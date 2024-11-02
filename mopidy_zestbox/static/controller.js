@@ -165,7 +165,7 @@ angular.module('zestboxApp', [])
     $scope.addTrack = function (track) {
       track.disabled = true;
 
-      $http.post('/party/add', track.uri).then(
+      $http.post('/zestbox/add', track.uri).then(
         function success(response) {
           $scope.message = ['success', 'Queued: ' + track.name];
         },
@@ -180,7 +180,7 @@ angular.module('zestboxApp', [])
     };
 
     $scope.nextTrack = function () {
-      $http.get('/party/vote').then(
+      $http.get('/zestbox/vote').then(
         function success(response) {
           $scope.message = ['success', '' + response.data];
         },
