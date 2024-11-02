@@ -17,7 +17,8 @@ angular.module('visualizerApp', [])
       "http://127.0.0.1:9001/icecast", {}
     );
 
-    var audiomotion = new AudioMotionAnalyzer(
+    import('https://cdn.skypack.dev/audiomotion-analyzer?min').then( AudioMotionAnalyzer => {
+      var audiomotion = new AudioMotionAnalyzer.default(
         document.getElementById("visualizer"),
         {
           source: player.audioElement,
@@ -25,7 +26,7 @@ angular.module('visualizerApp', [])
           mode: 3,
           connectSpeakers: false
         }
-    );
+      )});
 
     var mopidy = new Mopidy({
       'callingConvention': 'by-position-or-by-name'
