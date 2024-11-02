@@ -1,4 +1,3 @@
-import AudioMotionAnalyzer from 'https://cdn.skypack.dev/audiomotion-analyzer?min';
 'use strict';
 
 angular.module('visualizerApp', [])
@@ -18,15 +17,16 @@ angular.module('visualizerApp', [])
       "http://127.0.0.1:9001/icecast", {}
     );
 
-    var audiomotion = new AudioMotionAnalyzer(
-      document.getElementById("visualizer"),
-      {
-        source: player.audioElement,
-        height: 200,
-        mode: 3,
-        connectSpeakers: false
-      }
-    );
+    import('https://cdn.skypack.dev/audiomotion-analyzer?min').then( (AudioMotionAnalyzer) => {
+      var audiomotion = new AudioMotionAnalyzer(
+        document.getElementById("visualizer"),
+        {
+          source: player.audioElement,
+          height: 200,
+          mode: 3,
+          connectSpeakers: false
+        }
+      )});
 
     var mopidy = new Mopidy({
       'callingConvention': 'by-position-or-by-name'
