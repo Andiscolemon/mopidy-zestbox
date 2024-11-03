@@ -5,6 +5,7 @@ angular.module('visualizerApp', [])
 
     $scope.loading = true;
     $scope.ready = false;
+    $scope.coverImage = "./src/thumbnail-fb.png"
     $scope.currentState = {
       paused: false,
       track: {
@@ -38,6 +39,7 @@ angular.module('visualizerApp', [])
         .then(function (track) {
           if (track)
             $scope.currentState.track = track;
+            $scope.getTrackCoverImage(track);
           return mopidy.playback.getState();
         })
         .then(function (state) {
@@ -57,6 +59,7 @@ angular.module('visualizerApp', [])
 
     mopidy.on('event:trackPlaybackStarted', function (event) {
       $scope.currentState.track = event.tl_track.track;
+      $scope.getTrackCoverImage(event.tl_track.track);      
       $scope.$apply();
     });
 
@@ -88,15 +91,10 @@ angular.module('visualizerApp', [])
     };
 
     $scope.getTrackCoverImage = function (track) {
-      var imageUri = "./src/thumbnail-fb.png";
-      if (track.uri) {
-        var lookup = [];
-        lookup.push(track.uri)
-        mopidy.library.getImages({"uris": lookup}).done(function (results) {
-          imageUri = Object.values(results)[0].uri}
-      )}
-
-      return imageUri;
+      if (track.uri) {  
+          mopidy.library.getImages({"uris": [track.uri]}).then(function (results) {
+          $scope.coverImage = Object.values(results)[0][0].uri}, function () { $scope.coverImage = "./src/thumbnail-fb.png"; }
+      )};
     };
 
     $scope.getFontAwesomeIcon = function (source) {
