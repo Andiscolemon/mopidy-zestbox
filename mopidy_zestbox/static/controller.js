@@ -78,7 +78,7 @@ angular.module('zestboxApp', [])
 
     mopidy.on('event:tracklistChanged', function () {
       mopidy.tracklist.getLength().done(function (length) {
-        if(!$scope.playingUserTrack) { $scope.currentState.length = length;}
+        if($scope.playingUserTrack) { $scope.currentState.length = length;}
         else if(length < 1) {
           $scope.changeToBackgroundTracks()
         }
