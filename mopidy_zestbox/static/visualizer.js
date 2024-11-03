@@ -88,12 +88,16 @@ angular.module('visualizerApp', [])
     };
 
     $scope.getTrackCoverImage = function (track) {
+      var imageUri = "./src/thumbnail-fb.png";
       if (track.uri) {
-        mopidy.library.getImages({"uris": [track.uri]}).done(function (results) {
-          return Object.values(results).map(function(image) {return image[0].uri}
-      )})}
-      else { return "./src/thumbnail-fb.png"; }
-    }
+        var lookup = [];
+        lookup.push(track.uri)
+        mopidy.library.getImages({"uris": lookup}).done(function (results) {
+          imageUri = Object.values(results)[0].uri}
+      )}
+
+      return imageUri;
+    };
 
     $scope.getFontAwesomeIcon = function (source) {
       var sources_with_fa_icon = ['bandcamp', 'mixcloud', 'soundcloud', 'spotify', 'youtube'];
