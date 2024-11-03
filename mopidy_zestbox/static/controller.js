@@ -7,8 +7,10 @@ angular.module('zestboxApp', [])
     // Scope variables
     $scope.message = [];
     $scope.tracks = [];
+    $scope.backgroundTracks = []
     $scope.tracksToLookup = [];
     $scope.maxTracksToLookup = 50; // Will be overwritten later by module config
+    $scope.playingUserTrack = false;
     $scope.loading = true;
     $scope.ready = false;
     $scope.currentState = {
@@ -20,10 +22,17 @@ angular.module('zestboxApp', [])
       }
     };
 
-    // Get the max tracks to lookup at once from the 'max_results' config value in mopidy.conf
+    // Get the max tracks to lookup and background tracks at once from the config values in mopidy.conf
     $http.get('/zestbox/config?key=max_results').then(function success(response) {
       if (response.status == 200) {
         $scope.maxTracksToLookup = +response.data;
+      }
+    }, null);
+    
+    $http.get('/zestbox/config?key=background_tracks').then(function success(response) {
+      if (response.status == 200) {
+        var bg_tracks = response.data.replace("('","").replace(")","").replace("\'", "");
+        $scope.backgroundTracks = bg_tracks.split(",").slice(0,-1);
       }
     }, null);
 
@@ -45,6 +54,9 @@ angular.module('zestboxApp', [])
         })
         .then(function (length) {
           $scope.currentState.length = length;
+          if(length < 1) {
+            $scope.changeToBackgroundTracks()
+          }
         })
         .done(function () {
           $scope.ready = true;
@@ -66,10 +78,22 @@ angular.module('zestboxApp', [])
 
     mopidy.on('event:tracklistChanged', function () {
       mopidy.tracklist.getLength().done(function (length) {
-        $scope.currentState.length = length;
+        if(!$scope.playingUserTrack) { $scope.currentState.length = length;}
+        else if(length < 1) {
+          $scope.changeToBackgroundTracks()
+        }
         $scope.$apply();
       });
     });
+
+    $scope.changeToBackgroundTracks = function () {
+      $scope.playingUserTrack = false;
+      mopidy.tracklist.add({"uris": $scope.backgroundTracks}).done(function () {
+        mopidy.tracklist.setConsume({"value": false}).done(function () {
+          mopidy.playback.play()
+        })
+      })
+    }
 
     $scope.printDuration = function (track) {
       if (!track.length)
@@ -162,8 +186,13 @@ angular.module('zestboxApp', [])
         });
     };
 
-    $scope.addTrack = function (track) {
+    $scope.addTrack = async function (track) {
       track.disabled = true;
+
+      if(!$scope.playingUserTrack) {
+        $scope.playingUserTrack = true
+        await mopidy.tracklist.clear().done()
+      }
 
       $http.post('/zestbox/add', track.uri).then(
         function success(response) {
