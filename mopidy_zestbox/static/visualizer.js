@@ -88,7 +88,7 @@ angular.module('visualizerApp', [])
     };
 
     $scope.getTrackCoverImage = function (track) {
-      var imageUri = "No image found.";
+      var imageUri = "./src/thumbnail-fb.png";
       if (track.uri) {
         imageUri = mopidy.library.get_images(track.uri)[0];
       }
