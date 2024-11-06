@@ -20,9 +20,9 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
     
     def track_playback_ended(self, time_position, tl_track):
         track = tl_track.track
-        if self.zestbox.currently_playing.get() == track:
+        if self.zestbox.currently_playing == track:
             self.zestbox.currently_playing = []
-        if self.zestbox.is_user_tracklist.get():
+        if self.zestbox.is_user_tracklist:
             try:
                 self.zestbox.current_tracks.pop(track)
                 self.zestbox.votes = []
@@ -106,7 +106,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
 
     def add_vote(self, ip):
         self.zestbox.votes.append(self._getip())
-        if (len(self.frontend.zestbox.votes.get()) >= self.requiredVotes):
+        if (len(self.frontend.zestbox.votes) >= self.requiredVotes):
             self.core.playback.next()
             self.zestbox.votes = []
             return True
