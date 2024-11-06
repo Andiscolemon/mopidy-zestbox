@@ -26,3 +26,7 @@ body {
   float: right;
   text-transform: uppercase;
 }
+.square {
+  object-fit: cover;
+  aspect-ratio: 1;
+}
