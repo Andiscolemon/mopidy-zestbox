@@ -1,61 +1,66 @@
-import os, shutil
+import os, shutil, json
 
-import tornado.web
+import tornado.web,pykka
 
 from mopidy import config, ext
+
+from mopidy_zestbox import frontend
 
 __version__ = '1.2.2'
 
 
 class VoteRequestHandler(tornado.web.RequestHandler):
 
-    def initialize(self, core, data, config):
+    def initialize(self, core, frontend):
         self.core = core
-        self.data = data
-        self.requiredVotes = config["zestbox"]["votes_to_skip"]
+        self.frontend = frontend
+        self.requiredVotes = frontend.zestbox.votes_to_skip.get()
 
     def _getip(self):
         return self.request.headers.get("X-Forwarded-For", self.request.remote_ip)
 
     def get(self):
-        currentTrack = self.core.playback.get_current_track().get()
-        if (currentTrack == None): return
-        currentTrackURI = currentTrack.uri
+        if not self.frontend.zestbox.session_started.get():
+            self.write("Session is not started!")
+            self.set_status(409)
+            return
 
-        # If the current track is different to the one stored, clear votes
-        if (currentTrackURI != self.data["track"]):
-            self.data["track"] = currentTrackURI
-            self.data["votes"] = []
+        current_track = self.frontend.zestbox.currently_playing.get()
+        if not current_track or not self.frontend.zestbox.is_user_tracklist.get(): return
 
-        if (self._getip() in self.data["votes"]): # User has already voted
+        if self._getip() in self.frontend.zestbox.votes.get(): # User has already voted
             self.write("You have already voted to skip this song =)")
         else: # Valid vote
-            self.data["votes"].append(self._getip())
-            if (len(self.data["votes"]) == self.requiredVotes):
-                self.core.playback.next()
+            if self.frontend.add_vote(self._getip()).get():            
                 self.write("Skipping...")
             else:
-                self.write("You have voted to skip this song. ("+str(self.requiredVotes-len(self.data["votes"]))+" more votes needed)")
+                self.write("You have voted to skip this song. ("+str(self.requiredVotes-len(self.frontend.zestbox.votes.get()))+" more votes needed)")
 
 
 class AddRequestHandler(tornado.web.RequestHandler):
-
-    def initialize(self, core, data, config):
+    def initialize(self, core, frontend):
         self.core = core
-        self.data = data
-        self.maxQueueLength = config["zestbox"]["max_queue_length"]
+        self.frontend = frontend
+        self.maxQueueLength = frontend.zestbox.max_queue_length.get()
 
     def _getip(self):
         return self.request.headers.get("X-Forwarded-For", self.request.remote_ip)
 
     def post(self):
+        if not self.frontend.zestbox.session_started.get():
+            self.write("Session is not started!")
+            self.set_status(403)
+            return
         # when the last n tracks were added by the same user, abort.
-        if self.data["queue"] and all([e == self._getip() for e in self.data["queue"]]):
+        current_queue = self.frontend.zestbox.queue.get()
+        if current_queue and all([e == self._getip() for e in current_queue]):
             self.write("You have requested too many songs")
             self.set_status(409)
             return
 
-        track_uri = self.request.body.decode()
+        request = json.loads(self.request.body)
+        track_uri = request["uri"]
+        user = request["user"]
         if not track_uri:
             self.set_status(400)
             return
@@ -66,32 +71,21 @@ class AddRequestHandler(tornado.web.RequestHandler):
             self.set_status(409)
             return
 
-        pos = 0
-        if self.data["last"]:
-            queue = self.core.tracklist.index(self.data["last"]).get() or 0
-            current = self.core.tracklist.index().get() or 0
-            pos = max(queue, current) # after lastly enqueued and after current track
-
         try:
-            self.data["last"] = self.core.tracklist.add(uris=[track_uri], at_position=pos+1).get()[0]
-            self.data["queue"].append(self._getip())
-            self.data["queue"].pop(0)
+            self.frontend.add(new_uris=[track_uri], requester=user)
+            self.frontend.append_ip_to_queue(self._getip())
         except Exception as e:
             self.write("Unable to add track. Internal Server Error: "+repr(e))
             self.set_status(500)
             return
 
-        self.core.tracklist.set_consume(True)
-        if self.core.playback.get_state().get() == "stopped":
-            self.core.playback.play()
 
 
-class IndexHandler(tornado.web.RequestHandler):
-
+class IndexHandler(tornado.web.RequestHandler):    
     def initialize(self, config):
         self.__dict = {}
         # Make zestbox configuration from mopidy.conf available as variables in index.html
-        for conf_key, value in config["zestbox"].items():
+        for conf_key, value in config.items():
             if conf_key != "enabled":
                 self.__dict[conf_key] = value
 
@@ -110,17 +104,20 @@ class VisualizerHandler(tornado.web.RequestHandler):
                 self.__dict[conf_key] = value
 
     def get(self):
-        if shutil.which("icecast2") is None:
+        if shutil.which("icecast2") is not None:
+            self.__dict["has_icecast"] = True
+        else:
             self.set_status(
                 503, "Icecast is required to view audio visualization."
-            )
+            ) 
+            self.__dict["no_icecast"] = False
         return self.render("static/visualizer.html", **self.__dict)
-
+                
 
 class ConfigHandler(tornado.web.RequestHandler):
 
     def initialize(self, config):
-        self.zest_cfg = config["zestbox"]
+        self.zest_cfg = config
 
     def get(self):
         conf_key = self.get_argument("key")
@@ -140,19 +137,58 @@ class ConfigHandler(tornado.web.RequestHandler):
             self.write("Internal server error: "+repr(e))
             return
 
+class ControlHandler(tornado.web.RequestHandler):
+    def initialize(self, frontend):
+        self.frontend = frontend
+
+    def post(self):
+        try:
+            command = json.loads(self.request.body.decode())
+        except ValueError as e:
+            self.write("Malformed JSON data provided.")
+            self.set_status(400)
+            return
+            
+        match command["command"]:
+            case "pause":
+                self.frontend.set_pause(True)
+                return
+            case "resume":
+                self.frontend.set_pause(False)
+                return
+            case "start":
+                try:
+                    self.frontend.start_session(command)
+                except Exception as e:
+                    self.write(e)
+                    self.set_status(409)
+                    return
+                self.write("Session started!")
+                self.set_status(200)
+
+    
+    def get(self):
+        reply = self.frontend.get_state().get()
+        reply = json.dumps(reply)
+        self.write(reply)
 
 def lemon_factory(config, core):
     from tornado.web import RedirectHandler
+    from .frontend import ZestboxFrontend
+    
+    #TODO: Move data dict to Zestbox frontend class completely.
     data = {'track':"", 'votes':[], 'queue': [None] * config["zestbox"]["max_tracks"], 'last':None}
-
+    fe = pykka.ActorRegistry.get_by_class(ZestboxFrontend)[0].proxy()
+    
     return [
     ('/', RedirectHandler, {'url': 'index.html'}), #always redirect from extension root to the html
-    ('/index.html', IndexHandler, {'config': config }),
-    ('/vote', VoteRequestHandler, {'core': core, 'data':data, 'config':config}),
-    ('/add', AddRequestHandler, {'core': core, 'data':data, 'config':config}),
-    ('/config', ConfigHandler, {'config':config}),
+    ('/index.html', IndexHandler, {'config': config["zestbox"]}),
+    ('/vote', VoteRequestHandler, {'core': core, 'frontend': fe}),
+    ('/add', AddRequestHandler, {'core': core, 'frontend': fe}),
+    ('/config', ConfigHandler, {'config':config["zestbox"]}),
+    ('/control', ControlHandler, {'frontend': fe}),
     ('/visualizer', RedirectHandler, {'url': 'visualizer.html'}),
-    ('/visualizer.html', VisualizerHandler, {'core': core, 'data':data, 'config':config})
+    ('/visualizer.html', VisualizerHandler, {'core': core, 'data':data, 'config':config["zestbox"]})
     ]
 
 
@@ -172,12 +208,15 @@ class Extension(ext.Extension):
         schema['hide_pause'] = config.Boolean(optional=True)
         schema['hide_skip'] = config.Boolean(optional=True)
         schema['style'] = config.String()
+        schema['needs_admin'] = config.String()
         schema['max_results'] = config.Integer(minimum=0, optional=True)
         schema['max_queue_length'] = config.Integer(minimum=0, optional=True)
         schema['background_tracks'] = config.List(optional = True)
         return schema
 
     def setup(self, registry):
+        from .frontend import ZestboxFrontend
+        registry.add('frontend', ZestboxFrontend)
         registry.add('http:static', {
             'name': self.ext_name,
             'path': os.path.join(os.path.dirname(__file__), 'static'),
@@ -186,3 +225,4 @@ class Extension(ext.Extension):
             'name': self.ext_name,
             'factory': lemon_factory,
         })
+        

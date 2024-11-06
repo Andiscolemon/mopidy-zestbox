@@ -2,20 +2,28 @@
 
 // TODO : add a mopidy service designed for angular, to avoid ugly $scope.$apply()...
 angular.module('zestboxApp', [])
-  .controller('MainController', function ($scope, $http) {
+  .controller('MainController', function ($scope, $http, $timeout) {
 
     // Scope variables
+    $scope.query = {} // Why the hell did this break?
     $scope.message = [];
     $scope.tracks = [];
-    $scope.backgroundTracks = []
     $scope.tracksToLookup = [];
     $scope.maxTracksToLookup = 50; // Will be overwritten later by module config
-    $scope.playingUserTrack = false;
+    $scope.initialized = false;
+    $scope.reqName = "";
+    $scope.admin = "";
     $scope.loading = true;
     $scope.ready = false;
+    $scope.coverImages = [];
     $scope.currentState = {
+      reqName: "",
+      currentVotes: 0,
+      votesNeeded: 0,
+      playingUserTrack: false,
       paused: false,
       length: 0,
+      coverImage: "./src/thumbnail-fb.png",
       track: {
         length: 0,
         name: 'Nothing playing right now! Add default background tracks to config or queue a song!'
@@ -28,75 +36,67 @@ angular.module('zestboxApp', [])
         $scope.maxTracksToLookup = +response.data;
       }
     }, null);
-    
-    $http.get('/zestbox/config?key=background_tracks').then(function success(response) {
-      if (response.status == 200) {
-        var bg_tracks = response.data.replace("('","").replace(")","").replace("\'", "");
-        $scope.backgroundTracks = bg_tracks.split(",").slice(0,-1);
-      }
-    }, null);
 
     var mopidy = new Mopidy({
       'callingConvention': 'by-position-or-by-name'
     });
 
     mopidy.on('state:online', function () {
-      mopidy.playback
-        .getCurrentTrack()
-        .then(function (track) {
-          if (track)
-            $scope.currentState.track = track;
-          return mopidy.playback.getState();
-        })
-        .then(function (state) {
-          $scope.currentState.paused = (state === 'paused');
-          return mopidy.tracklist.getLength();
-        })
-        .then(function (length) {
-          $scope.currentState.length = length;
-          if(length < 1) {
-            $scope.changeToBackgroundTracks()
-          }
-        })
-        .done(function () {
+      $http.get("/zestbox/control").then(function success(response) {
+        var data = response.data;
+        $scope.initialized = data.sessionStarted;
+        $scope.currentState.currentVotes = data.votesAdded;
+        $scope.currentState.votesNeeded = data.votesNeeded;
+        $scope.currentState.playingUserTrack = data.userTrack;
+        $scope.currentState.paused = data.paused;
+        $scope.currentState.length = data.playlistLength;
+        $scope.currentState.reqName = data.requestedBy;
+        if(data.currentTrack)
+          $scope.currentState.track = data.currentTrack;
+        return data
+      }, null).then(function (data) {
+        $timeout(function () {
           $scope.ready = true;
           $scope.loading = false;
-          $scope.$apply();
           $scope.search();
-        });
-    });
-
-    mopidy.on('event:playbackStateChanged', function (event) {
-      $scope.currentState.paused = (event.new_state === 'paused');
-      $scope.$apply();
-    });
-
-    mopidy.on('event:trackPlaybackStarted', function (event) {
-      $scope.currentState.track = event.tl_track.track;
-      $scope.$apply();
-    });
-
-    mopidy.on('event:tracklistChanged', function () {
-      mopidy.tracklist.getLength().done(function (length) {
-        if($scope.playingUserTrack) { $scope.currentState.length = length;}
-        else if(length < 1) {
-          $scope.changeToBackgroundTracks()
-        }
-        $scope.$apply();
+        }, 10)
       });
     });
 
-    $scope.changeToBackgroundTracks = function () {
-      $scope.playingUserTrack = false;
-      mopidy.tracklist.add({"uris": $scope.backgroundTracks}).done(function () {
-        mopidy.tracklist.setConsume({"value": false}).done(function () {
-          mopidy.playback.play()
-        })
-      })
-    }
+    mopidy.on('event:playbackStateChanged', function (event) {
+      $scope.refreshData();
+      $scope.$apply();
+    });
+    mopidy.on('event:trackPlaybackStarted', function (event) {
 
+      $scope.refreshData();
+      $scope.$apply();
+    });
+    mopidy.on('event:tracklistChanged', function (event) {
+      $scope.refreshData();
+      $scope.$apply();
+    });
+
+    $scope.refreshData = function () {
+      $http.get("/zestbox/control").then(function success(response) {
+        $timeout(function () {
+          var data = response.data;
+          $scope.initialized = data.sessionStarted;
+          $scope.currentState.currentVotes = data.votesAdded;
+          $scope.currentState.votesNeeded = data.votesNeeded;
+          $scope.currentState.playingUserTrack = data.userTrack;
+          $scope.currentState.paused = data.paused;
+          $scope.currentState.length = data.playlistLength;
+          $scope.currentState.reqName = data.requestedBy;
+          $scope.currentState.track = data.currentTrack;
+          if (data.currentTrack)
+            $scope.getTrackCoverImage(data.currentTrack.uri);
+        }, 10);
+      }, null)
+    };
+      
     $scope.printDuration = function (track) {
-      if (!track.length)
+      if (!track || !track.length)
         return '';
 
       var _sum = parseInt(track.length / 1000);
@@ -110,16 +110,19 @@ angular.module('zestboxApp', [])
       $scope.message = [];
       $scope.loading = true;
 
-      if (!$scope.searchField) {
+      console.log($scope.query.text)
+      if (!$scope.query.text) {
+        console.log("Local browse.")
         mopidy.library.browse({
           'uri': 'local:directory'
         }).done($scope.handleBrowseResult);
         return;
       }
-
+      
+      console.log("And big search.")
       mopidy.library.search({
         'query': {
-          'any': [$scope.searchField]
+          'any': [$scope.query.text]
         }
       }).done($scope.handleSearchResult);
     };
@@ -142,7 +145,7 @@ angular.module('zestboxApp', [])
       if ($scope.tracksToLookup) {
         $scope.lookupOnePageOfTracks();
       }
-    }
+    };
 
     $scope.lookupOnePageOfTracks = function () {
       mopidy.library.lookup({ 'uris': $scope.tracksToLookup.splice(0, $scope.maxTracksToLookup) }).done(function (tracklistResult) {
@@ -185,16 +188,10 @@ angular.module('zestboxApp', [])
           $scope.$apply();
         });
     };
-
-    $scope.addTrack = async function (track) {
+    $scope.addTrack = function (track) {
       track.disabled = true;
 
-      if(!$scope.playingUserTrack) {
-        $scope.playingUserTrack = true
-        await mopidy.tracklist.clear().done()
-      }
-
-      $http.post('/zestbox/add', track.uri).then(
+      $http.post('/zestbox/add', {"uri": track.uri, "user": "A LEMON?"}).then(
         function success(response) {
           $scope.message = ['success', 'Queued: ' + track.name];
         },
@@ -228,6 +225,18 @@ angular.module('zestboxApp', [])
       return sourceAsText;
     };
 
+    $scope.getTrackCoverImage = function (track) {
+      if (!track) return;
+      if (track.uri) {  
+          mopidy.library.getImages({"uris": [track.uri]})
+          .then(function (results) {
+          $scope.currentState.coverImage = Object.values(results)[0][0].uri; }, 
+          function () { 
+            $scope.currentState.coverImage = "./src/thumbnail-fb.png"; 
+            $scope.$apply();
+          });
+      }};
+
     $scope.getFontAwesomeIcon = function (source) {
       var sources_with_fa_icon = ['bandcamp', 'mixcloud', 'soundcloud', 'spotify', 'youtube'];
       var css_class = 'fa fa-music';
@@ -242,7 +251,13 @@ angular.module('zestboxApp', [])
     };
 
     $scope.togglePause = function () {
-      var _fn = $scope.currentState.paused ? mopidy.playback.resume : mopidy.playback.pause;
-      _fn().done();
+      $http.post('/zestbox/control', {command: $scope.currentState.paused ? 'resume' : 'paused'});
+    };
+
+    $scope.init_session = function () {
+      $http.post('/zestbox/control', {command: "start", backgroundPlaylist: [], adminPassphrase: ""})
+      .then(function () {
+        $scope.initialized = true;
+      }); // TODO: Add actual session customization through web UI. 
     };
   });

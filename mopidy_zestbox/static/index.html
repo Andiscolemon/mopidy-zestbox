@@ -16,7 +16,25 @@
     <script type="text/javascript" src="controller.js"></script>
   </head>
   <body ng-controller="MainController">
-    <div class="container-fluid" style="margin-top:20px">
+    <div ng-if="!initialized" class="container-fluid" style="margin-top:20px">
+      <div class="row">
+        <div class="col-8">
+          <p>WELCOME TO ZESTBOX - <small>A REFRESHING COLLABORATIVE MUSIC PLAYER</small><p>
+          <span>CURRENT SESSION SETTINGS! TEMPORARILY SET BY CONFIG FILE ONLY.</span>
+        </div>
+        <div class="col-2">
+          <ul>
+            <li>ADMIN CONTROLS: {{ needs_admin }}</li>
+            <li>MAX QUEUE LENGTH: {{ max_queue_length}}</li>
+            <li>VOTES NEEDED TO SKIP: {{votes_to_skip}}</li>
+            <li>BACKGROUND TRACKS: {% if not background_tracks %} NOT SET {% else %} {{background_tracks}} {% end %}
+        </div> 
+      </div>
+      <div class="row">
+        <p> IF THIS IS OKAY, THEN GO AHEAD AND <button ng-click="init_session()"> START A SESSION </button></p>
+      </div>
+    </div>
+    <div ng-if="initialized" class="container-fluid" style="margin-top:20px">
       <div class="row">
         <div class="col-4">
           {% if not hide_pause %}
@@ -36,6 +54,7 @@
           </small></p>
         </div>
         <div class="col-8">
+          <img ng-src="{{! currentState.coverImage }}" class="img-thumbnail square" style="max-width: 200px; max-height: 200px;">
           <div class="card card-body bg-light">
             <span>{{! currentState.track.name }}
               <small>
@@ -46,6 +65,7 @@
                 </span>
               </small>
               <small>{{! printDuration(currentState.track) }}</small>
+              <small>Requested by: {{! currentState.reqName }}</small>
             </span>
           </div>
         </div>
@@ -53,7 +73,7 @@
       <div class="row">
         <div class="col-12">
           <form ng-submit="search()">
-            <input type="text" role="search" class="form-control" placeholder="Search..." ng-model="searchField" ng-disabled="!ready">
+            <input type="text" role="search" class="form-control" placeholder="Search..." ng-model="query.text" ng-disabled="!ready">
           </form>
           <div ng-show="loading" class="container-fluid">
             <p><span class="fas fa-hourglass"></span> Loading...</p>
@@ -71,7 +91,8 @@
             <span class="fas fa-play" ng-if="!track.disabled"></span>
             <span class="fas fa-check" ng-if="track.disabled"></span>
           </button>
-          {{! track.name }} <small>{{! printDuration(track) }}</small><br>
+          {{! track.name }} <small>{{! printDuration(track) }}</small>
+          <br>
           <small>
             {{! track.album.name }}
             <span ng-if="track.artists">by</span>
