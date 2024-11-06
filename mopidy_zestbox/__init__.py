@@ -6,7 +6,7 @@ from mopidy import config, ext
 
 from mopidy_zestbox import frontend
 
-__version__ = '1.2.2z0.1.0'
+__version__ = '1.2.2+0.1.0'
 
 
 class VoteRequestHandler(tornado.web.RequestHandler):
