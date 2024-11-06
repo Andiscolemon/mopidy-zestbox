@@ -34,7 +34,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.zestbox.currently_playing = tl_track.track
 
     def playback_state_changed(self, old_state, new_state):
-        self.zestbox.playback_paused = new_state is 'paused'
+        self.zestbox.playback_paused = new_state == 'paused'
 
     ### Frontend function definitions
     def change_to_background_tracks(self):
