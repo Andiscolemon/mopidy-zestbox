@@ -60,11 +60,13 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
                 uris_to_add.append(uri) 
 
         self.core.tracklist.add(uris=uris_to_add)
+        self.core.tracklist.add(uris=uris_to_add)
         self.core.tracklist.set_consume(False)
         self.core.tracklist.set_random(True)
         self.core.tracklist.set_repeat(True)
         if self.core.playback.get_state().get() == "stopped":
             self.core.playback.play()
+        self.logger.info(f"Added background tracks.\nAdded tracks: {uris_to_add}")
         self.logger.info(f"Added background tracks.\nAdded tracks: {uris_to_add}")
 
     def add(self, new_uris = [], requester = ""):
