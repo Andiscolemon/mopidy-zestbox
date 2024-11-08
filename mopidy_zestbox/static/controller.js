@@ -11,7 +11,6 @@ angular.module('zestboxApp', [])
     $scope.tracksToLookup = [];
     $scope.maxTracksToLookup = 50; // Will be overwritten later by module config
     $scope.initialized = false;
-    $scope.reqName = "";
     $scope.admin = "";
     $scope.loading = true;
     $scope.ready = false;
@@ -51,6 +50,7 @@ angular.module('zestboxApp', [])
         $scope.currentState.paused = data.paused;
         $scope.currentState.length = data.playlistLength;
         $scope.currentState.reqName = data.requestedBy;
+        $scope.currentState.coverImage = data.imgUri
         if(data.currentTrack)
           $scope.currentState.track = data.currentTrack;
         return data
@@ -88,9 +88,9 @@ angular.module('zestboxApp', [])
           $scope.currentState.paused = data.paused;
           $scope.currentState.length = data.playlistLength;
           $scope.currentState.reqName = data.requestedBy;
-          $scope.currentState.track = data.currentTrack;
-          if (data.currentTrack)
-            $scope.getTrackCoverImage(data.currentTrack.uri);
+          $scope.currentState.coverImage = data.imgUri
+          if(data.currentTrack)
+            $scope.currentState.track = data.currentTrack;
         }, 10);
       }, null)
     };
