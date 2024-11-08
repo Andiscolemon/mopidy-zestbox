@@ -64,7 +64,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
             if not self.zestbox.playing_user_track:
                 self.change_to_user_mode_next_track = True                
                 self.core.tracklist.clear()
-            track = self.core.tracklist.filter({"uri": new_uris})
+            track = self.core.library.lookup({"uri": new_uris}).get()[new_uris[0]]
             self.zestbox.current_tracks[track.uri] = requester
             self.core.tracklist.add(uris=new_uris).get()
             if self.core.playback.get_state().get() == "stopped":
