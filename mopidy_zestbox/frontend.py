@@ -16,7 +16,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         
     ### Mopidy event listeners
     def tracklist_changed(self):
-        if self.core.tracklist.get_length().get() < 1:
+        if self.core.tracklist.get_length().get() < 1 and not self.change_to_user_mode_next_track:
             self.change_to_background_tracks()
     
     def track_playback_ended(self, time_position, tl_track):
