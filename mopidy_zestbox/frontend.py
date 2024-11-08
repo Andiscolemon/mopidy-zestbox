@@ -29,7 +29,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
                 self.zestbox.votes = []
             except KeyError as e:
                 self.logger.error("Could not synchronize Zestbox frontend with core tracklist!")
-        self.logger.info(f"Track ended, changing track to {self.core.tracklist.next_track().get()}.")
+        self.logger.info(f"Track ended, changing track to {self.core.tracklist.next_track(tl_track).get()}.")
         
             
 
