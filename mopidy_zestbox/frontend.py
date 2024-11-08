@@ -34,10 +34,10 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
             
 
     def track_playback_started(self, tl_track):
+        self.zestbox.currently_playing = tl_track.track
         if self.change_to_user_mode_next_track:
             self.change_to_user_mode()
             self.change_to_user_mode_next_track = False
-        self.zestbox.currently_playing = tl_track.track
         self.logger.info(f"Changed track to {tl_track.track}.")
         
 
