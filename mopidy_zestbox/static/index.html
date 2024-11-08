@@ -38,12 +38,12 @@
         <div class="row">
           <div class="col-md-3">
             {% if not hide_pause %}
-              <button type="button" class="btn" ng-model="button" ng-click="togglePause()" ng-disabled="!ready || currentState.length === 0" ng-class="{'btn-success' : currentState.paused, 'btn-danger': !currentState.paused}">
+              <button type="button" class="btn" ng-model="button" ng-click="togglePause()" ng-disabled="!ready || currentState.length === 0 || !currentState.playingUserTrack" ng-class="{'btn-success' : currentState.paused, 'btn-danger': !currentState.paused}">
                 <span class="fas fa-pause" ng-class="{'fa-play': currentState.paused, 'fa-pause' : !currentState.paused}"></span>
               </button>
-            {% end %}-->
+            {% end %}
             {% if not hide_skip %}
-              <button type="button" class="btn btn-primary" ng-model="button" ng-click="nextTrack()" ng-disabled="!ready || currentState.length === 0">
+              <button type="button" class="btn btn-primary" ng-model="button" ng-click="nextTrack()" ng-disabled="!ready || currentState.length === 0 || !currentState.playingUserTrack">
                 <span class="fas fa-step-forward"></span>
               </button>
             {% end %}
@@ -54,7 +54,7 @@
             </small></p>
           </div>
           <div class="col-md-3 d-inline-flex justify-content-center justify-content-lg-end">
-            <img ng-src="{{ currentState.coverImage }}" class="img-thumbnail square" style="max-width: 200px; max-height: 200px;">
+            <img ng-src="{{! currentState.coverImage }}" class="img-thumbnail square" style="max-width: 200px; max-height: 200px;">
           </div>
           <div class="col-md-6">
             <div class="card card-body bg-light">

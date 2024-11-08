@@ -12,22 +12,27 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.needs_admin = self.config["needs_admin"]
         self.background_tracks = self.config["background_tracks"]
         self.max_queue_length = self.config["max_queue_length"]
+        self.change_to_user_mode_next_track = False
         
     ### Mopidy event listeners
     def tracklist_changed(self):
         if self.core.tracklist.get_length().get() < 1:
             self.change_to_background_tracks()
+        self.zestbox.playing_user_track = True
     
     def track_playback_ended(self, time_position, tl_track):
         track = tl_track.track
         if self.zestbox.currently_playing == track:
             self.zestbox.currently_playing = []
-        if self.zestbox.is_user_tracklist:
+        if self.zestbox.playing_user_track and not self.change_to_user_mode_next_track:
             try:
                 self.zestbox.current_tracks.pop(track)
                 self.zestbox.votes = []
             except KeyError as e:
                 self.logger.error("Could not synchronize Zestbox frontend with core tracklist!")
+        elif self.change_to_user_mode_next_track:
+            self.change_to_user_mode()
+            self.change_to_user_mode_next_track = False
             
 
     def track_playback_started(self, tl_track):
@@ -35,12 +40,10 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
 
     def playback_state_changed(self, old_state, new_state):
         self.zestbox.playback_paused = new_state == 'paused'
-        if new_state == 'stopped' and self.zestbox.session_started:
-            # Dirty hack, gotta research.
-            self.start_session()
 
     ### Frontend function definitions
     def change_to_background_tracks(self):
+        self.zestbox.playing_user_track = False
         if not self.zestbox.background_playlist:
             return
 
@@ -48,15 +51,14 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.core.tracklist.set_consume(False)
         self.core.tracklist.set_random(True)
         self.core.tracklist.set_repeat(True)
-        self.zestbox.is_user_tracklist = False
         if self.core.playback.get_state().get() == "stopped":
             self.core.playback.play()
 
     def add(self, new_uris = [], requester = ""):
         try:
-            if not self.zestbox.is_user_tracklist:
+            if not self.zestbox.playing_user_track:
+                self.change_to_user_mode_next_track = True                
                 self.core.tracklist.clear()
-                self.change_to_user_mode()
             self.core.tracklist.add(uris=new_uris).get()
             track = self.core.tracklist.filter({"uri": new_uris})
             if self.core.playback.get_state().get() == "stopped":
@@ -73,7 +75,8 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.core.tracklist.set_consume(True)
         self.core.tracklist.set_random(False)
         self.core.tracklist.set_repeat(False)
-        self.zestbox.is_user_tracklist = True
+        self.zestbox.playing_user_track = True
+        self.change_to_user_mode_next_track = False
 
     def start_session(self, settings = None):
         self.logger.info("Starting a Zestbox session!")
@@ -128,13 +131,15 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         if track:
             img = self.core.library.get_images([track.uri]).get()
         if img:
-            img = img[track.uri]
+            img = img[track.uri][0].uri # The first one'll do.
             return img
         else:
             return "./src/thumbnail-fb.png"
 
     def get_state(self):
-        return self.zestbox.state_json()
+        data = self.zestbox.state_json()
+        data["imgUri"] = self.get_img_uri(self.zestbox.currently_playing)
+        return data
 
 class Zestbox:
     def __init__(self):
@@ -145,7 +150,6 @@ class Zestbox:
         self.needs_admin = False
         self.session_started = False
         self.playing_user_track = False
-        self.is_user_tracklist = False
         self.playback_paused = False
         self.votes = []
         self.queue = []

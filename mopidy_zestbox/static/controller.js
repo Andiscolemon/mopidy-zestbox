@@ -78,6 +78,8 @@ angular.module('zestboxApp', [])
     });
 
     $scope.refreshData = function () {
+      if (!$scope.ready)
+        return
       $http.get("/zestbox/control").then(function success(response) {
         $timeout(function () {
           var data = response.data;
