@@ -203,7 +203,7 @@ angular.module('zestboxApp', [])
     $scope.addTrack = function (track) {
       track.disabled = true;
 
-      $http.post('/zestbox/add', {"uri": track.uri, "user": $scope.trackRequester.text}).then(
+      $http.post('/zestbox/add', {"uri": track.uri, "user": $scope.trackRequester.name}).then(
         function success(response) {
           $scope.message = ['success', 'Queued: ' + track.name];
         },
