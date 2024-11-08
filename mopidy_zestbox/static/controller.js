@@ -5,7 +5,7 @@ angular.module('zestboxApp', [])
   .controller('MainController', function ($scope, $http, $timeout) {
 
     // Scope variables
-    $scope.trackSelected = [];
+    $scope.trackSelected = {};
 
     $scope.trackRequester = "An Anonymous Lemon";
 
