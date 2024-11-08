@@ -114,7 +114,7 @@
               </div>
               <div class="modal-body">
                 <p>Do you want to queue {{! trackSelected.name }} to the tracklist?<br><br>Who's requesting? (Optional)</p>
-                <input ng-model="trackRequester">
+                <input ng-model="trackRequester.name">
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-primary" ng-click="addTrack(trackSelected)" data-dismiss="modal">Request song!</button>

@@ -7,7 +7,7 @@ angular.module('zestboxApp', [])
     // Scope variables
     $scope.trackSelected = {};
 
-    $scope.trackRequester = "An Anonymous Lemon";
+    $scope.trackRequester = {name: "An Anonymous Lemon"};
 
 
     $scope.query = {} // Why the hell did this break?
@@ -96,6 +96,8 @@ angular.module('zestboxApp', [])
           $scope.currentState.length = data.playlistLength;
           $scope.currentState.reqName = data.requestedBy;
           $scope.currentState.coverImage = data.imgUri
+          $scope.ready = true;
+          $scope.loading = false;
           if(data.currentTrack)
             $scope.currentState.track = data.currentTrack;
         }, 10);
@@ -201,7 +203,7 @@ angular.module('zestboxApp', [])
     $scope.addTrack = function (track) {
       track.disabled = true;
 
-      $http.post('/zestbox/add', {"uri": track.uri, "user": $scope.trackRequester}).then(
+      $http.post('/zestbox/add', {"uri": track.uri, "user": $scope.trackRequester.text}).then(
         function success(response) {
           $scope.message = ['success', 'Queued: ' + track.name];
         },
