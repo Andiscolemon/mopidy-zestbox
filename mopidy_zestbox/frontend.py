@@ -75,7 +75,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.core.tracklist.set_repeat(False)
         self.zestbox.is_user_tracklist = True
 
-    def start_session(self, settings):
+    def start_session(self, settings = None):
         self.logger.info("Starting a Zestbox session!")
         if self.zestbox.session_started:
             self.logger.info("Exception!!")
@@ -85,10 +85,13 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.logger.info("Initialized!")
         self.zestbox.needs_admin = self.config["needs_admin"]
         self.zestbox.background_playlist = self.config["background_tracks"] #settings["backgroundPlaylist"]
-        self.zestbox.admin_passphrase = settings["adminPassphrase"]
+
         self.zestbox.max_queue_length = self.config["max_queue_length"]
         self.zestbox.queue = [None] * self.config["max_queue_length"]
         self.zestbox.votes_to_skip = self.config["votes_to_skip"] #settings["votesToSkip"]
+        if settings:
+            self.zestbox.admin_passphrase = settings["adminPassphrase"]            
+
         self.logger.info("Configured!")
         if self.zestbox.background_playlist:
             self.logger.info("Background tracks found!")
@@ -119,7 +122,16 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         if pause: self.core.playback.pause()
         else: self.core.playback.resume()
 
-      
+    # Would just use get_images() from the UI side, but I'd rather just get one URI and get all info at once on track change.
+    def get_img_uri(self, track):
+        img = ""
+        if track:
+            img = self.core.library.get_images([track.uri]).get()
+        if img:
+            img = img[track.uri]
+            return img
+        else:
+            return "./src/thumbnail-fb.png"
 
     def get_state(self):
         return self.zestbox.state_json()

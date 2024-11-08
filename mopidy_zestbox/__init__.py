@@ -169,6 +169,7 @@ class ControlHandler(tornado.web.RequestHandler):
     
     def get(self):
         reply = self.frontend.get_state().get()
+        reply["imgUri"] = self.frontend.get_img_uri(reply["currentTrack"]).get()
         reply = json.dumps(reply)
         self.write(reply)
 
