@@ -178,7 +178,7 @@ class Zestbox:
             "currentTrack": self.currently_playing.serialize() if self.currently_playing else None,
             "playlistLength": len(self.current_tracks),
             "requestedBy": "Zestbox" if not self.playing_user_track\
-                  else "A LEMON!" if self.currently_playing is None\
+                  else "A LEMON!" if not self.currently_playing\
                       else self.current_tracks[self.currently_playing],
             "paused": self.playback_paused
         }
