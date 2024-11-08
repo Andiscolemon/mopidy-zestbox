@@ -197,11 +197,7 @@ angular.module('zestboxApp', [])
     $scope.addTrackDialog = function(track) {
       $scope.trackSelected = track;
     }
-
-    $scope.addTrackDialog = function() {
-      $scope.trackSelected = [];
-    }
-
+    
     $scope.addTrack = function (track) {
       track.disabled = true;
 
