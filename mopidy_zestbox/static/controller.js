@@ -5,6 +5,11 @@ angular.module('zestboxApp', [])
   .controller('MainController', function ($scope, $http, $timeout) {
 
     // Scope variables
+    $scope.trackSelected = [];
+
+    $scope.trackRequester = "An Anonymous Lemon";
+
+
     $scope.query = {} // Why the hell did this break?
     $scope.message = [];
     $scope.tracks = [];
@@ -114,14 +119,12 @@ angular.module('zestboxApp', [])
 
       console.log($scope.query.text)
       if (!$scope.query.text) {
-        console.log("Local browse.")
         mopidy.library.browse({
           'uri': 'local:directory'
         }).done($scope.handleBrowseResult);
         return;
       }
       
-      console.log("And big search.")
       mopidy.library.search({
         'query': {
           'any': [$scope.query.text]
@@ -190,10 +193,19 @@ angular.module('zestboxApp', [])
           $scope.$apply();
         });
     };
+
+    $scope.addTrackDialog = function(track) {
+      $scope.trackSelected = track;
+    }
+
+    $scope.addTrackDialog = function() {
+      $scope.trackSelected = [];
+    }
+
     $scope.addTrack = function (track) {
       track.disabled = true;
 
-      $http.post('/zestbox/add', {"uri": track.uri, "user": "A LEMON?"}).then(
+      $http.post('/zestbox/add', {"uri": track.uri, "user": $scope.trackRequester}).then(
         function success(response) {
           $scope.message = ['success', 'Queued: ' + track.name];
         },
