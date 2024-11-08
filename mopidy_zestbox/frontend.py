@@ -29,6 +29,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
                 self.zestbox.votes = []
             except KeyError as e:
                 self.logger.error("Could not synchronize Zestbox frontend with core tracklist!")
+        self.logger.info(f"Track ended, changing track to {self.core.tracklist.next_track().get()}.")
         
             
 
@@ -37,6 +38,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
             self.change_to_user_mode()
             self.change_to_user_mode_next_track = False
         self.zestbox.currently_playing = tl_track.track
+        self.logger.info(f"Changed track to {tl_track.track}.")
         
 
     def playback_state_changed(self, old_state, new_state):
