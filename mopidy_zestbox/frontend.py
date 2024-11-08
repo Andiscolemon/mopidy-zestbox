@@ -52,7 +52,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         uris_to_add = []
         for entry in self.zestbox.background_playlist:
             uri = entry
-            if "playlist" in entry.uri:
+            if "playlist" in entry:
                 tracks = self.core.library.lookup([entry]).get()
                 for track in tracks:
                     uris_to_add.append(track.uri)
