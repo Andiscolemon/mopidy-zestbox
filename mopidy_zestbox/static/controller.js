@@ -64,6 +64,7 @@ angular.module('zestboxApp', [])
           $scope.ready = true;
           $scope.loading = false;
           $scope.search();
+          $scope.$apply()
         }, 10)
       });
     });
@@ -73,7 +74,6 @@ angular.module('zestboxApp', [])
       $scope.$apply();
     });
     mopidy.on('event:trackPlaybackStarted', function (event) {
-
       $scope.refreshData();
       $scope.$apply();
     });
@@ -197,7 +197,7 @@ angular.module('zestboxApp', [])
     $scope.addTrackDialog = function(track) {
       $scope.trackSelected = track;
     }
-    
+
     $scope.addTrack = function (track) {
       track.disabled = true;
 
