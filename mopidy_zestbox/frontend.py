@@ -68,10 +68,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
             tracks = self.core.library.lookup(new_uris).get()
             track = tracks[new_uris[0]][0]
             self.zestbox.current_tracks[track.uri] = requester
-            self.core.tracklist.add(uris=new_uris).get()
-            if self.core.playback.get_state().get() == "stopped":
-                self.core.playback.play()
-                self.logger.info("I PLAY MUSIC NOW.") 
+            self.core.tracklist.add(uris=new_uris).get() 
         except Exception as e:
             self.logger.error(e)
             return e
