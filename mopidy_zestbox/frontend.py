@@ -123,7 +123,7 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
 
     def add_vote(self, ip):
         self.zestbox.votes.append(ip)
-        if (len(self.frontend.zestbox.votes) >= self.requiredVotes):
+        if (len(self.zestbox.votes) >= self.requiredVotes):
             self.core.playback.next()
             self.zestbox.votes = []
             return True
