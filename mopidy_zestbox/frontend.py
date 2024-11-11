@@ -51,12 +51,11 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         if not self.zestbox.background_playlist:
             return
 
-        self.core.tracklist.add(uris=self.zestbox.background_playlist)
+        self.core.tracklist.add(uris=self.zestbox.background_playlist).get()
         self.core.tracklist.set_consume(False)
         self.core.tracklist.set_random(True)
         self.core.tracklist.set_repeat(True)
-        if self.core.playback.get_state().get() == "stopped":
-            self.core.playback.play()
+        self.core.playback.play()
         self.logger.info(f"Added background tracks.\nAdded tracks: {self.core.library.lookup(self.zestbox.background_playlist).get()}")
 
 
@@ -68,7 +67,9 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
             tracks = self.core.library.lookup(new_uris).get()
             track = tracks[new_uris[0]][0]
             self.zestbox.current_tracks[track.uri] = requester
-            self.core.tracklist.add(uris=new_uris).get() 
+            if not self.zestbox.playing_user_track:
+                self.change_to_user_mode_next_track = True 
+            self.core.tracklist.add(uris=new_uris).get()
         except Exception as e:
             self.logger.error(e)
             return e
