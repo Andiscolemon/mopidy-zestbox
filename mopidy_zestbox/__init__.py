@@ -26,7 +26,7 @@ class VoteRequestHandler(tornado.web.RequestHandler):
             return
 
         current_track = self.frontend.zestbox.currently_playing.get()
-        if not current_track or not self.frontend.zestbox.is_user_tracklist.get(): return
+        if not current_track or not self.frontend.zestbox.playing_user_track.get(): return
 
         if self._getip() in self.frontend.zestbox.votes.get(): # User has already voted
             self.write("You have already voted to skip this song =)")
