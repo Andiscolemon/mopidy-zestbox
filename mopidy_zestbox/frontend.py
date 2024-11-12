@@ -13,6 +13,11 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.background_tracks = self.config["background_tracks"]
         self.max_queue_length = self.config["max_queue_length"]
         self.change_to_user_mode_next_track = False
+        if self.config["auto_start"]:
+            if not self.config["needs_admin"]:
+                self.start_session()
+            else:
+                self.logger.error("Autostart cannot be used while admin features are enabled!") # TODO: Except if there's a persistent admin password stored.
         
     ### Mopidy event listeners
     def tracklist_changed(self):
