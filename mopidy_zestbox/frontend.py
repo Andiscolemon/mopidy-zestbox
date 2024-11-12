@@ -21,9 +21,10 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         
     ### Mopidy event listeners
     def tracklist_changed(self):
-        if self.core.tracklist.get_length().get() < 1:
+        if self.core.tracklist.get_length().get() < 1 and not self.change_to_user_mode_next_track:
             self.change_to_background_tracks()
-        self.zestbox.playing_user_track = True
+        if self.core.playback.get_state().get() == "stopped" and self.core.tracklist.get_length().get() > 0:
+           self.core.playback.play()
     
     def track_playback_ended(self, time_position, tl_track):
         track = tl_track.track
@@ -31,17 +32,20 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
             self.zestbox.currently_playing = []
         if self.zestbox.playing_user_track and not self.change_to_user_mode_next_track:
             try:
-                self.zestbox.current_tracks.pop(track)
+                self.zestbox.current_tracks.pop(track.uri)
                 self.zestbox.votes = []
             except KeyError as e:
                 self.logger.error("Could not synchronize Zestbox frontend with core tracklist!")
-        elif self.change_to_user_mode_next_track:
-            self.change_to_user_mode()
-            self.change_to_user_mode_next_track = False
+        self.logger.info(f"Track ended, changing track to {self.core.tracklist.next_track(tl_track).get()}.")
             
 
     def track_playback_started(self, tl_track):
         self.zestbox.currently_playing = tl_track.track
+        if self.change_to_user_mode_next_track:
+            self.change_to_user_mode()
+            self.change_to_user_mode_next_track = False
+        self.logger.info(f"Changed track to {tl_track.track}.")
+        
 
     def playback_state_changed(self, old_state, new_state):
         self.zestbox.playback_paused = new_state == 'paused'
@@ -52,28 +56,30 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         if not self.zestbox.background_playlist:
             return
 
-        self.core.tracklist.add(uris=self.zestbox.background_playlist)
+        self.core.tracklist.add(uris=self.zestbox.background_playlist).get()
         self.core.tracklist.set_consume(False)
         self.core.tracklist.set_random(True)
         self.core.tracklist.set_repeat(True)
-        if self.core.playback.get_state().get() == "stopped":
-            self.core.playback.play()
+        self.core.playback.play()
+        self.logger.info(f"Added background tracks.\nAdded tracks: {self.core.library.lookup(self.zestbox.background_playlist).get()}")
+
 
     def add(self, new_uris = [], requester = ""):
         try:
             if not self.zestbox.playing_user_track:
                 self.change_to_user_mode_next_track = True                
                 self.core.tracklist.clear()
+            tracks = self.core.library.lookup(new_uris).get()
+            track = tracks[new_uris[0]][0]
+            self.zestbox.current_tracks[track.uri] = requester
+            if not self.zestbox.playing_user_track:
+                self.change_to_user_mode_next_track = True 
             self.core.tracklist.add(uris=new_uris).get()
-            track = self.core.tracklist.filter({"uri": new_uris})
-            if self.core.playback.get_state().get() == "stopped":
-                self.core.playback.play()
-                self.logger.info("I PLAY MUSIC NOW.") 
         except Exception as e:
             self.logger.error(e)
             return e
         
-        self.zestbox.currentTracks[track] = requester
+        
         self.logger.info("I ADDEDDED TRACK!") 
 
     def change_to_user_mode(self):
@@ -119,8 +125,8 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         self.zestbox.queue.pop(0)
 
     def add_vote(self, ip):
-        self.zestbox.votes.append(self._getip())
-        if (len(self.frontend.zestbox.votes) >= self.requiredVotes):
+        self.zestbox.votes.append(ip)
+        if (len(self.zestbox.votes) >= self.zestbox.votes_to_skip):
             self.core.playback.next()
             self.zestbox.votes = []
             return True
@@ -177,8 +183,8 @@ class Zestbox:
             "currentTrack": self.currently_playing.serialize() if self.currently_playing else None,
             "playlistLength": len(self.current_tracks),
             "requestedBy": "Zestbox" if not self.playing_user_track\
-                  else "A LEMON!" if self.currently_playing is None\
-                      else self.current_tracks[self.currently_playing],
+                  else "A LEMON!" if not self.currently_playing\
+                      else self.current_tracks[self.currently_playing.uri],
             "paused": self.playback_paused
         }
 
