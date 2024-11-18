@@ -30,12 +30,11 @@ class ZestboxFrontend(pykka.ThreadingActor, CoreListener):
         track = tl_track.track
         if self.zestbox.currently_playing == track:
             self.zestbox.currently_playing = []
-        if self.zestbox.playing_user_track and not self.change_to_user_mode_next_track:
             try:
                 self.zestbox.current_tracks.pop(track.uri)
                 self.zestbox.votes = []
             except KeyError as e:
-                self.logger.error("Could not synchronize Zestbox frontend with core tracklist!")
+                self.logger.info("Current track not in user queue. Either ended track was background track or something's wrong.")
         self.logger.info(f"Track ended, changing track to {self.core.tracklist.next_track(tl_track).get()}.")
             
 
