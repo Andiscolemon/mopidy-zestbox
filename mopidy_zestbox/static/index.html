@@ -26,7 +26,7 @@
             <h2><b>WELCOME TO ZESTBOX</b><br><small><i class="text-muted">A REFRESHING COLLABORATIVE MUSIC PLAYER</i></small></h2>
             <br><br>
             <p>IF THIS IS OKAY, THEN GO AHEAD AND</p>
-            <button class="bg-warning" ng-click="init_session()">START THE SESSION<span class="mx-2 fas fa-play"></button>
+            <button class="bg-primary" ng-click="init_session()">START THE SESSION<span class="mx-2 fas fa-play"></button>
           </div>
           <div class="col-4">
             <p><b>CURRENT SESSION SETTINGS! TEMPORARILY SET BY CONFIG FILE ONLY.</b></p>
@@ -79,7 +79,17 @@
                   <i>{{! currentState.reqName }}</i>
                   </div>
                   <br>
-                  <small class="mb-3" style="position: absolute; bottom: 0"><b>{{! printDuration(currentState.track) }}</b></small>
+                  <div class="row justify-content-center" ng-if="currentState.track.length > 0">
+                    <div class="row col-12 p-0">
+                      <div class="row col-12 pl-4 pr-0 mr-1">
+                        <div class="progress w-100" style="overflow: visible; height: 2px">
+                          <div class="bg-primary" ng-style="{width: trackProgress / currentState.track.length * 100 + '%'}"></div>
+                          <div class="bg-light playhead"></div>
+                        </div>
+                      </div> 
+                      <div class="row justify-content-center col-12 mt-3"><small style="font-size: 60%">{{! printDuration(trackProgress)}} / {{! printDuration(currentState.track.length) }}</small></div>
+                    </div>
+                  </div>
               </span>
           </div>
         </div>

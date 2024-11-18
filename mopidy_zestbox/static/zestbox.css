@@ -34,3 +34,19 @@ body {
   object-fit: cover;
   aspect-ratio: 1;
 }
+.playhead{
+  overflow: visible;
+  margin-top: -8px;
+  box-sizing: content-box;
+  width: 4px;
+  height: 20px;
+}
+.bg-primary{
+  background-color: #F9D857 !important;
+}
+.bg-secondary{
+  background-color: #333 !important;
+}
+.bg-tertiary{
+  background-color: #005228 !important;
+}

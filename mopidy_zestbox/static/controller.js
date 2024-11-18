@@ -2,7 +2,7 @@
 
 // TODO : add a mopidy service designed for angular, to avoid ugly $scope.$apply()...
 angular.module('zestboxApp', [])
-  .controller('MainController', function ($scope, $http, $timeout) {
+  .controller('MainController', function ($scope, $http, $timeout, $interval) {
 
     // Scope variables
     $scope.trackSelected = {};
@@ -33,6 +33,7 @@ angular.module('zestboxApp', [])
         name: 'Nothing playing right now! Add default background tracks to config or queue a song!'
       }
     };
+    $scope.trackProgress = 0;
 
     // Get the max tracks to lookup and background tracks at once from the config values in mopidy.conf
     $http.get('/zestbox/config?key=max_results').then(function success(response) {
@@ -56,8 +57,15 @@ angular.module('zestboxApp', [])
         $scope.currentState.length = data.playlistLength;
         $scope.currentState.reqName = data.requestedBy;
         $scope.currentState.coverImage = data.imgUri
-        if(data.currentTrack)
+        if(data.currentTrack){
           $scope.currentState.track = data.currentTrack;
+          mopidy.playback.getTimePosition().done(function(time) {
+            $scope.trackProgress = time;
+          });
+        }
+        else {
+          $scope.trackProgress = 0
+        }
         return data
       }, null).then(function (data) {
         $timeout(function () {
@@ -98,21 +106,25 @@ angular.module('zestboxApp', [])
           $scope.currentState.coverImage = data.imgUri
           $scope.ready = true;
           $scope.loading = false;
-          if(data.currentTrack)
+          if(data.currentTrack) {
             $scope.currentState.track = data.currentTrack;
+            mopidy.playback.getTimePosition().done(function(time) {
+              $scope.trackProgress = time;
+            });
+          }
         }, 10);
       }, null)
     };
       
-    $scope.printDuration = function (track) {
-      if (!track || !track.length)
+    $scope.printDuration = function (length) {
+      if (length < 1)
         return '';
 
-      var _sum = parseInt(track.length / 1000);
-      var _min = parseInt(_sum / 60);
+      var _sum = length / 1000;
+      var _min = _sum / 60;
       var _sec = _sum % 60;
 
-      return '(' + _min + ':' + (_sec < 10 ? '0' + _sec : _sec) + ')';
+      return '(' + Math.trunc(_min) + ':' + (_sec < 10 ? '0' + Math.trunc(_sec) : Math.trunc(_sec)) + ')';
     };
 
     $scope.search = function () {
@@ -272,4 +284,10 @@ angular.module('zestboxApp', [])
         $scope.initialized = true;
       }); // TODO: Add actual session customization through web UI. 
     };
+
+    $interval(function () {
+      if($scope.currentState.track && $scope.currentState.track.length > 0 && $scope.trackProgress < $scope.currentState.track.length) {
+        $scope.trackProgress += 1000; 
+      }
+    }, 1000);
   });
