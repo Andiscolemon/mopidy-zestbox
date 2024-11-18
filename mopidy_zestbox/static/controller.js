@@ -57,8 +57,8 @@ angular.module('zestboxApp', [])
         $scope.currentState.length = data.playlistLength;
         $scope.currentState.reqName = data.requestedBy;
         $scope.currentState.coverImage = data.imgUri
+        $scope.currentState.track = data.currentTrack;
         if(data.currentTrack){
-          $scope.currentState.track = data.currentTrack;
           mopidy.playback.getTimePosition().done(function(time) {
             $scope.trackProgress = time;
           });
@@ -106,8 +106,8 @@ angular.module('zestboxApp', [])
           $scope.currentState.coverImage = data.imgUri
           $scope.ready = true;
           $scope.loading = false;
+          $scope.currentState.track = data.currentTrack;
           if(data.currentTrack) {
-            $scope.currentState.track = data.currentTrack;
             mopidy.playback.getTimePosition().done(function(time) {
               $scope.trackProgress = time;
             });
@@ -286,7 +286,7 @@ angular.module('zestboxApp', [])
     };
 
     $interval(function () {
-      if($scope.currentState.track && $scope.currentState.track.length > 0 && $scope.trackProgress < $scope.currentState.track.length) {
+      if($scope.currentState.track && $scope.currentState.track.length > 0 && $scope.trackProgress < $scope.currentState.track.length && !$scope.currentState.paused) {
         $scope.trackProgress += 1000; 
       }
     }, 1000);
