@@ -208,9 +208,10 @@ class Extension(ext.Extension):
         schema['hide_pause'] = config.Boolean(optional=True)
         schema['hide_skip'] = config.Boolean(optional=True)
         schema['style'] = config.String()
-        schema['needs_admin'] = config.String()
+        schema['needs_admin'] = config.Boolean(optional=True)
         schema['max_results'] = config.Integer(minimum=0, optional=True)
         schema['max_queue_length'] = config.Integer(minimum=0, optional=True)
+        schema['auto_start'] = config.Boolean(optional=True)
         schema['background_tracks'] = config.List(optional = True)
         return schema
 
